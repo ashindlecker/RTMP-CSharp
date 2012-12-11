@@ -32,12 +32,15 @@ namespace RTMPTests
                     if(testSend)
                     {
                         testSend = false;
+
+                        var testObject = new AmfObject();
+                        testObject.Numbers.Add("Ben", 10);
                         var testPacket = new AmfWriter();
                         testPacket.WriteString("createStream");
                         testPacket.WriteNumber(2.0);
                         testPacket.WriteNull();
+                        testPacket.WriteObject(testObject);
                         client.SendAmf(testPacket);
-
                         client.Ping();
                     }
                 }

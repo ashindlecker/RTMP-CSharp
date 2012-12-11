@@ -33,9 +33,11 @@ namespace RTMP
             writer.Write(boolean);
         }
 
-        public void WriteString(string str)
+        public void WriteString(string str, bool objectStart = false)
         {
-            writer.Write((byte) Amf0Types.String);
+            if(objectStart == false)
+                writer.Write((byte) Amf0Types.String);
+
             writer.Write((ushort) str.Length);
             
             for (var i = 0; i < str.Length; i++)
@@ -55,8 +57,21 @@ namespace RTMP
 
             foreach (var s in amfObject.Strings)
             {
+                WriteString(s.Key, true);
+                WriteString(s.Value);
             }
 
+            foreach (var s in amfObject.Numbers)
+            {
+                WriteString(s.Key, true);
+                WriteNumber(s.Value);
+            }
+
+            foreach (var s in amfObject.Booleans)
+            {
+                WriteString(s.Key, true);
+                WriteBoolean(s.Value);
+            }
             //objects end with 0x00,0x00, (oject end identifier [0x09 in this case])
             writer.Write((byte)0x00);
             writer.Write((byte)0x00);

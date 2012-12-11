@@ -19,7 +19,6 @@ namespace RTMP
         {
             None,
             Handshaking,
-            HandshakingClientDone,
             Normal,
         }
 
@@ -89,7 +88,9 @@ namespace RTMP
         public void SendC2Handshake()
         {
             tcpClient.GetStream().Write(serverS1RandomBytes, 0, serverS1RandomBytes.Length);
-            CurrentState = ClientStates.HandshakingClientDone;
+            CurrentState = ClientStates.Normal;
+
+            HandshakeOver();
         }
 
         public void SendAmf(AmfWriter amf)
@@ -97,9 +98,11 @@ namespace RTMP
             sendMessage(amf.GetByteArray(), RtmpMessageTypeId.AMF0);
         }
 
-        public void Ping()
+
+        public void SendChunkSize(uint chunkSize)
         {
-            sendMessage(new byte[0]{}, RtmpMessageTypeId.Ping );
+            BigEndianBitConverter converter = new BigEndianBitConverter();
+            sendMessage(converter.GetBytes(chunkSize), RtmpMessageTypeId.SetChunkSize);
         }
 
         private void sendMessage(byte[] data, RtmpMessageTypeId messageType)
@@ -140,6 +143,7 @@ namespace RTMP
             {
                 var buffer = new byte[tcpClient.Available];
                 tcpClient.GetStream().Read(buffer, 0, buffer.Length);
+
                 if(CurrentState == ClientStates.Handshaking)
                 {
                     if(sMemory.Length < HANDSHAKE_RAND_LENGTH * 2)
@@ -155,12 +159,102 @@ namespace RTMP
                         ParseS1Handshake();
                     }
                 }
-
-                if (CurrentState == ClientStates.HandshakingClientDone)
+                else
                 {
                     CurrentState = ClientStates.Normal;
+                    var memory = new MemoryStream(buffer);
+                    var reader = new EndianBinaryReader(EndianBitConverter.Big, memory);
+
+                    while (memory.Position < memory.Length)
+                    {
+                        var convert = new BigEndianBitConverter();
+                        reader.ReadBytes(4); //as of now not used data
+                        var bodySizeBytes = new byte[] {0, reader.ReadByte(), reader.ReadByte(), reader.ReadByte()};
+                        var bodySize = convert.ToUInt32(bodySizeBytes, 0);
+
+                        var messageId = (RtmpMessageTypeId) reader.ReadByte();
+                        reader.ReadInt32(); //stream id is not needed as of now
+                        switch (messageId)
+                        {
+                            case RtmpMessageTypeId.SetChunkSize:
+                                {
+                                    ParseSetChunkSize(reader.ReadInt32());
+                                }
+                                break;
+                            case RtmpMessageTypeId.UserControlMessage:
+                                {
+                                    //No fawking clue why it's six bytes atm
+                                    ParseUserControlMessage(reader.ReadBytes(6));
+                                }
+                                break;
+                            case RtmpMessageTypeId.ServerBandwidth:
+                                {
+                                    ParseServerBandwidth(reader.ReadInt32());
+                                }
+                                break;
+                            case RtmpMessageTypeId.ClientBandwitdh:
+                                {
+                                    ParseClientBandwidth(reader.ReadInt32(), reader.ReadByte());
+                                }
+                                break;
+                            case RtmpMessageTypeId.Audio:
+                                break;
+                            case RtmpMessageTypeId.Video:
+                                break;
+                            case RtmpMessageTypeId.AMF3:
+                                break;
+                            case RtmpMessageTypeId.Invoke:
+                                break;
+                            case RtmpMessageTypeId.AMF0:
+                                {
+                                    var amfReader = new AmfReader();
+                                    amfReader.Parse(reader, bodySize);
+                                    ParseAmf(amfReader.amfData);
+                                }
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+
+                        ParseMessage(messageId, reader);
+                    }
                 }
             }
+        }
+
+        protected virtual void ParseSetChunkSize(int chunkSize)
+        {
+            //this should be done in the derived classes
+        }
+
+        protected virtual void ParseUserControlMessage(byte[] eventType)
+        {
+            //this should be done in the derived classes
+        }
+
+        protected virtual void ParseServerBandwidth(int amount)
+        {
+            //this should be done in the derived classes
+        }
+
+        protected virtual void ParseClientBandwidth(int amount, byte limitType)
+        {
+            //this should be done in the derived classes
+        }
+        
+        protected virtual void ParseAmf(AmfData amf)
+        {
+            //this should be done in the derived classes
+        }
+
+        protected virtual void ParseMessage(RtmpMessageTypeId messageType, EndianBinaryReader reader)
+        {
+            //this should be done in the derived classes
+        }
+
+        protected virtual void HandshakeOver()
+        {
+            //this should be done in the derived classes
         }
     }
 }

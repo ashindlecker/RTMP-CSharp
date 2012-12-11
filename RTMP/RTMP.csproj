@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AmfObject.cs" />
+    <Compile Include="AmfReader.cs" />
     <Compile Include="AmfWriter.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="Globals.cs" />

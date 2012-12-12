@@ -53,7 +53,6 @@ namespace RTMP
 
                 var type = (Amf0Types)reader.ReadByte();
 
-                Console.WriteLine(type);
                 switch (type)
                 {
                     case Amf0Types.Number:

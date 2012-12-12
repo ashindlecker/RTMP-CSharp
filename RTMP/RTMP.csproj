@@ -46,6 +46,7 @@
     <Compile Include="AmfReader.cs" />
     <Compile Include="AmfWriter.cs" />
     <Compile Include="Client.cs" />
+    <Compile Include="DataFrame.cs" />
     <Compile Include="Globals.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

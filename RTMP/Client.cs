@@ -18,6 +18,8 @@ namespace RTMP
         public int StreamId;
         public string PublisherId;
 
+        public DataFrame MyDataFrame;
+
         public enum ClientStates
         {
             None,
@@ -25,9 +27,9 @@ namespace RTMP
             WaitingForAcknowledge,
             WaitForPeerBandwidth,
             WaitForStreamBeginControl,
-            WaitForConnectResponse,
+            WaitForConnectResult,
             WaitForCreateStreamResponse,
-            WaitForPublishStreamBeginResponse,
+            WaitForPublishStreamBeginResult,
             Streaming,
         }
 
@@ -42,6 +44,8 @@ namespace RTMP
 
         public Client()
         {
+            MyDataFrame = new DataFrame();
+
             CurrentState = ClientStates.None;
             tcpClient = new TcpClient();
             random = new Random();
@@ -104,7 +108,8 @@ namespace RTMP
         private void SendC2Handshake()
         {
             tcpClient.GetStream().Write(serverS1RandomBytes, 0, serverS1RandomBytes.Length);
-            CurrentState = ClientStates.Normal;
+            Connect("app");
+            CurrentState = ClientStates.WaitingForAcknowledge;
 
             HandshakeOver();
         }
@@ -245,7 +250,6 @@ namespace RTMP
                 }
                 else
                 {
-                    CurrentState = ClientStates.Normal;
                     var memory = new MemoryStream(buffer);
                     var reader = new EndianBinaryReader(EndianBitConverter.Big, memory);
 
@@ -270,15 +274,37 @@ namespace RTMP
                                 {
                                     //No fawking clue why it's six bytes atm
                                     ParseUserControlMessage(reader.ReadBytes(6));
+                                    if(CurrentState == ClientStates.WaitForStreamBeginControl)
+                                    {
+                                        Console.WriteLine("SWITCh3");
+                                        CurrentState = ClientStates.WaitForConnectResult;
+                                    }
+                                    if(CurrentState == ClientStates.WaitForPublishStreamBeginResult)
+                                    {
+                                        Console.WriteLine("Switch6");
+                                        sendMetaData();
+                                        CurrentState = ClientStates.Streaming;
+                                    }
                                 }
                                 break;
                             case RtmpMessageTypeId.ServerBandwidth:
                                 {
+                                    if(CurrentState == ClientStates.WaitingForAcknowledge)
+                                    {
+                                        Console.WriteLine("SWITCH1");
+                                        SendWindowAcknowledgementSize();
+                                        CurrentState = ClientStates.WaitForPeerBandwidth;
+                                    }
                                     ParseServerBandwidth(reader.ReadInt32());
                                 }
                                 break;
                             case RtmpMessageTypeId.ClientBandwitdh:
                                 {
+                                    if(CurrentState == ClientStates.WaitForPeerBandwidth)
+                                    {
+                                        Console.WriteLine("SWITCh2");
+                                        CurrentState = ClientStates.WaitForStreamBeginControl;
+                                    }
                                     ParseClientBandwidth(reader.ReadInt32(), reader.ReadByte());
                                 }
                                 break;
@@ -294,6 +320,26 @@ namespace RTMP
                                 {
                                     var amfReader = new AmfReader();
                                     amfReader.Parse(reader, bodySize);
+
+                                    if(CurrentState == ClientStates.WaitForConnectResult)
+                                    {
+                                        if (amfReader.amfData.Strings.Contains("_result"))
+                                        {
+                                            Console.WriteLine("SWITCH4");
+                                            createStream();
+                                            CurrentState = ClientStates.WaitForCreateStreamResponse;
+                                        }
+                                    }
+                                    if(CurrentState == ClientStates.WaitForCreateStreamResponse)
+                                    {
+                                        if (amfReader.amfData.Strings.Contains("_result"))
+                                        {
+                                            Console.WriteLine("SWITCH5");
+                                            publish(PublisherId);
+                                            CurrentState = ClientStates.WaitForPublishStreamBeginResult;
+                                        }
+                                    }
+
                                     ParseAmf(amfReader.amfData);
                                 }
                                 break;
@@ -305,6 +351,11 @@ namespace RTMP
                     }
                 }
             }
+        }
+
+        protected virtual void sendMetaData()
+        {
+            SendAmf(MyDataFrame.GetAmf());
         }
 
         protected virtual void ParseSetChunkSize(int chunkSize)

@@ -14,7 +14,9 @@ namespace RTMP
     {
         public const ushort HANDSHAKE_RAND_LENGTH = 1536;
         public const byte PROTOCOL_VERSION = 0x03;
-        
+
+        public int StreamId;
+
         public enum ClientStates
         {
             None,
@@ -40,6 +42,8 @@ namespace RTMP
 
             sMemory = new MemoryStream();
             sWriter = new BinaryWriter(sMemory);
+
+            StreamId = 0;
         }
 
         public void Connect(string ip, int port = 1935)
@@ -107,14 +111,14 @@ namespace RTMP
 
         private void sendMessage(byte[] data, RtmpMessageTypeId messageType)
         {
+            var converter = new BigEndianBitConverter();
             const byte chunkHeaderType = 0x03;
-            var timeStampDelta = new byte[3] { 0x00, 0x0b, 0x68 };
+            var timeStampDelta = new byte[3] { 0x00, 0x00, 0x00 };
 
             //The packet length is only 3 bytes long when sent, so the last byte of the integer needs to be cut off
             var packetLengthBytes = new byte[3];
             {
                 var packetLengthValue = data.Length;
-                var converter = new BigEndianBitConverter();
 
                 var packetLengthBytesFull = converter.GetBytes(packetLengthValue);
                 for (var i = 0; i < packetLengthBytes.Length; i++)
@@ -123,19 +127,21 @@ namespace RTMP
                 }
             }
 
-            const int streamId = 0x00;
-
             var memory = new MemoryStream();
             var writer = new EndianBinaryWriter(EndianBitConverter.Big, memory);
             writer.Write(chunkHeaderType);
             writer.Write(timeStampDelta);
             writer.Write(packetLengthBytes);
             writer.Write((byte)messageType);
-            writer.Write(streamId);
+
+            var streamIdBytes = converter.GetBytes(StreamId);
+            for (int i = streamIdBytes.Length - 1; i >= 0; i--)
+            {
+                writer.Write(streamIdBytes[i]);
+            }
             writer.Write(data);
             tcpClient.GetStream().Write(memory.ToArray(), 0, memory.ToArray().Length);
         }
-
 
         public void Update()
         {

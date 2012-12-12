@@ -51,10 +51,17 @@ namespace RTMP
             writer.Write((byte) Amf0Types.Null);
         }
 
-        public void WriteObject(AmfObject amfObject)
+        public void WriteObject(AmfObject amfObject, bool isArray = false)
         {
+            if(!isArray)
             writer.Write((byte) Amf0Types.Object);
-
+            else
+            {
+                writer.Write((byte) Amf0Types.Array);
+                writer.Write(
+                    (int)
+                    (amfObject.Booleans.Count + amfObject.Numbers.Count + amfObject.Strings.Count + amfObject.Nulls));
+            }
             foreach (var s in amfObject.Strings)
             {
                 WriteString(s.Key, true);

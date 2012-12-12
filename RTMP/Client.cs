@@ -180,6 +180,8 @@ namespace RTMP
 
                         var messageId = (RtmpMessageTypeId) reader.ReadByte();
                         reader.ReadInt32(); //stream id is not needed as of now
+
+                        Console.WriteLine("======" + messageId + "======");
                         switch (messageId)
                         {
                             case RtmpMessageTypeId.SetChunkSize:

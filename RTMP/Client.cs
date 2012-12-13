@@ -19,7 +19,8 @@ namespace RTMP
         public string PublisherId;
 
         public DataFrame MyDataFrame;
-
+        BigEndianBitConverter converter = new BigEndianBitConverter();
+        public uint CurrentChunkSize { get; private set; }
         public enum ClientStates
         {
             None,
@@ -44,6 +45,7 @@ namespace RTMP
 
         public Client()
         {
+            CurrentChunkSize = 0;
             MyDataFrame = new DataFrame();
 
             CurrentState = ClientStates.None;
@@ -61,7 +63,7 @@ namespace RTMP
         public void Connect(string ip, int port = 1935)
         {
             tcpClient.Connect(ip, port);
-            tcpClient.NoDelay = true;
+            tcpClient.NoDelay = false;
             CurrentState = ClientStates.Handshaking;
         }
 
@@ -121,8 +123,20 @@ namespace RTMP
 
         public void SendChunkSize(uint chunkSize)
         {
-            BigEndianBitConverter converter = new BigEndianBitConverter();
             sendMessage(converter.GetBytes(chunkSize), RtmpMessageTypeId.SetChunkSize);
+            CurrentChunkSize = chunkSize;
+        }
+
+        public void Stop()
+        {
+            var amfWriter = new AmfWriter();
+            amfWriter.WriteString("deleteStream");
+            amfWriter.WriteNumber(7);
+            amfWriter.WriteNull();
+            amfWriter.WriteNumber(1);
+            SendAmf(amfWriter);
+            
+            tcpClient.Close();
         }
 
         private void Connect(string type = "app")
@@ -197,7 +211,6 @@ namespace RTMP
 
             const byte chunkHeaderType = 0x03;
 
-            var converter = new BigEndianBitConverter();
             var chunkCount = 0;
             for (var i = 0; i < flvs.Length; i++)
             {
@@ -219,13 +232,13 @@ namespace RTMP
 
                 writer.Write(flv.Data);
             }
-            SendChunkSize((uint)chunkCount);
+            if(chunkCount > CurrentChunkSize)
+                SendChunkSize((uint)chunkCount);
             tcpClient.GetStream().Write(memory.ToArray(), 0, memory.ToArray().Length);
         }
 
         private void sendMessage(byte[] data, RtmpMessageTypeId messageType)
         {
-            var converter = new BigEndianBitConverter();
 
             const byte chunkHeaderType = 0x03;
 
@@ -288,10 +301,9 @@ namespace RTMP
 
                     while (memory.Position < memory.Length)
                     {
-                        var convert = new BigEndianBitConverter();
                         reader.ReadBytes(4); //as of now not used data
                         var bodySizeBytes = new byte[] {0, reader.ReadByte(), reader.ReadByte(), reader.ReadByte()};
-                        var bodySize = convert.ToUInt32(bodySizeBytes, 0);
+                        var bodySize = converter.ToUInt32(bodySizeBytes, 0);
 
                         var messageId = (RtmpMessageTypeId) reader.ReadByte();
                         reader.ReadInt32(); //stream id is not needed as of now

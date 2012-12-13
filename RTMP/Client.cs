@@ -152,6 +152,7 @@ namespace RTMP
 
         private void publish(string id)
         {
+            SendChunkSize(10000);
             var writer = new AmfWriter();
             writer.WriteString("publish");
             writer.WriteNumber(0);
@@ -188,6 +189,37 @@ namespace RTMP
             writer.Write(bytes);
             sendMessage(memory.ToArray(), RtmpMessageTypeId.Audio);
 
+        }
+
+        public void SendFlv(FlvTag[] flvs)
+        {
+            var memory = new MemoryStream();
+            var writer = new EndianBinaryWriter(EndianBitConverter.Big, memory);
+
+            const byte chunkHeaderType = 0x03;
+
+            var converter = new BigEndianBitConverter();
+            for (var i = 0; i < flvs.Length; i++)
+            {
+                var flv = flvs[i];
+                writer.Write(chunkHeaderType);
+                writer.Write(flv.TimeStamp, 0, 3);
+                writer.Write(flv.Length, 0, 3);
+                writer.Write((byte) flv.TagType);
+
+
+                //writer.Write(new byte[] {0x00, flv.StreamId[0], flv.StreamId[1], flv.StreamId[2]});
+
+                var streamIdBytes = converter.GetBytes(StreamId);
+                for (int id = streamIdBytes.Length - 1; id >= 0; id--)
+                {
+                    writer.Write(streamIdBytes[id]);
+                }
+
+                writer.Write(flv.Data);
+            }
+
+            tcpClient.GetStream().Write(memory.ToArray(), 0, memory.ToArray().Length);
         }
 
         private void sendMessage(byte[] data, RtmpMessageTypeId messageType)
@@ -282,7 +314,6 @@ namespace RTMP
                                     if(CurrentState == ClientStates.WaitForPublishStreamBeginResult)
                                     {
                                         Console.WriteLine("Switch6");
-                                        sendMetaData();
                                         CurrentState = ClientStates.Streaming;
                                     }
                                 }
@@ -344,7 +375,8 @@ namespace RTMP
                                 }
                                 break;
                             default:
-                                throw new ArgumentOutOfRangeException();
+                                Console.WriteLine(messageId);
+                                break;
                         }
 
                         ParseMessage(messageId, reader);
@@ -353,10 +385,6 @@ namespace RTMP
             }
         }
 
-        protected virtual void sendMetaData()
-        {
-            SendAmf(MyDataFrame.GetAmf());
-        }
 
         protected virtual void ParseSetChunkSize(int chunkSize)
         {

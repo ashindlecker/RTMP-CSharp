@@ -152,7 +152,6 @@ namespace RTMP
 
         private void publish(string id)
         {
-            SendChunkSize(10000);
             var writer = new AmfWriter();
             writer.WriteString("publish");
             writer.WriteNumber(0);
@@ -199,9 +198,11 @@ namespace RTMP
             const byte chunkHeaderType = 0x03;
 
             var converter = new BigEndianBitConverter();
+            var chunkCount = 0;
             for (var i = 0; i < flvs.Length; i++)
             {
                 var flv = flvs[i];
+                chunkCount += flv.Data.Length;
                 writer.Write(chunkHeaderType);
                 writer.Write(flv.TimeStamp, 0, 3);
                 writer.Write(flv.Length, 0, 3);
@@ -218,7 +219,7 @@ namespace RTMP
 
                 writer.Write(flv.Data);
             }
-
+            SendChunkSize((uint)chunkCount);
             tcpClient.GetStream().Write(memory.ToArray(), 0, memory.ToArray().Length);
         }
 
@@ -374,6 +375,9 @@ namespace RTMP
                                     ParseAmf(amfReader.amfData);
                                 }
                                 break;
+                                case RtmpMessageTypeId.Acknowledgement:
+                                ParseAcknowledgement(reader.ReadInt32());
+                                break;
                             default:
                                 Console.WriteLine(messageId);
                                 break;
@@ -383,6 +387,11 @@ namespace RTMP
                     }
                 }
             }
+        }
+
+        protected virtual void ParseAcknowledgement(int value)
+        {
+
         }
 
 

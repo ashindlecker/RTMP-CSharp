@@ -20,6 +20,7 @@ namespace RTMP
     public enum RtmpMessageTypeId : byte
     {
         SetChunkSize = 0x01,
+        Acknowledgement = 0x03,
         UserControlMessage = 0x04,
         ServerBandwidth = 0x05,
         ClientBandwitdh = 0x06,

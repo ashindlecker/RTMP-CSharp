@@ -7,6 +7,8 @@ using MiscUtil.Conversion;
 using RTMP;
 using System.IO;
 using MiscUtil.IO;
+using System.Diagnostics;
+using TwitchSharp;
 
 namespace RTMPTests
 {
@@ -14,36 +16,27 @@ namespace RTMPTests
     {
         static void Main(string[] args)
         {
-            
-            var memory = new MemoryStream();
-            var writer = new EndianBinaryWriter(EndianBitConverter.Big, memory);
+            var file = File.OpenRead("Test.flv");
+            var Flv = new RTMP.Flv();
+            Flv.Load(file);
 
-            RTMP.Client client = new Client();
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Restart();
+            var client = new Client();
+
+            client.PublisherId = "live_WhateverYourKeyIs";
             client.Connect("199.9.255.53");
             client.Start();
+            var count = 0;
 
-            bool testSend = true;
+            const int tagSend = 70;
+
+            var streamer = new FlvStreamer(Flv);
+            streamer.Start();
             while(true)
             {
                 client.Update();
-
-                if(client.CurrentState == Client.ClientStates.Normal)
-                {
-                    if(testSend)
-                    {
-                        testSend = false;
-
-                        var testObject = new AmfObject();
-                        testObject.Numbers.Add("Ben", 10);
-                        var testPacket = new AmfWriter();
-                        testPacket.WriteString("createStream");
-                        testPacket.WriteNumber(2.0);
-                        testPacket.WriteNull();
-                        testPacket.WriteObject(testObject);
-                        client.SendAmf(testPacket);
-                        client.Ping();
-                    }
-                }
+                streamer.Update(client);
             }
         }
     }

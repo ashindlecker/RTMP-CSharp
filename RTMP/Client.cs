@@ -328,6 +328,7 @@ namespace RTMP
                                     {
                                         Console.WriteLine("Switch6");
                                         CurrentState = ClientStates.Streaming;
+                                        SendChunkSize(100);
                                     }
                                 }
                                 break;

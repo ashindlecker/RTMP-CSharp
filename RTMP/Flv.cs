@@ -58,8 +58,6 @@ namespace RTMP
             StreamId = reader.ReadBytes(3);
             Data = reader.ReadBytes((int)LengthValue);
 
-            Console.WriteLine(BitConverter.ToString(StreamId));
-
             //BECAUSE SOMEONE AT ADOBE THOUGHT IT'D BE A GRAND IDEA TO DO MIXED ENDIAN
             TimeStampNormal = new byte[TimeStamp.Length];
             TimeStampNormal[0] = TimeStamp[3];

@@ -48,6 +48,7 @@
     <Compile Include="Client.cs" />
     <Compile Include="DataFrame.cs" />
     <Compile Include="Flv.cs" />
+    <Compile Include="FlvStreamer.cs" />
     <Compile Include="Globals.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

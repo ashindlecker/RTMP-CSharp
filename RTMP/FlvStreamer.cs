@@ -65,7 +65,7 @@ namespace RTMP
                 
                 for(uint count = 0; tagId < Video.Tags.Count && count < TagsPerMessage; tagId++, count++)
                 {
-                    Console.WriteLine(tagId);
+                    //Console.WriteLine(tagId);
                     sendTags.Add(Video.Tags[(int)tagId]);
                 }
 

@@ -321,12 +321,12 @@ namespace RTMP
                                     ParseUserControlMessage(reader.ReadBytes(6));
                                     if(CurrentState == ClientStates.WaitForStreamBeginControl)
                                     {
-                                        Console.WriteLine("SWITCh3");
+                                        //Console.WriteLine("SWITCh3");
                                         CurrentState = ClientStates.WaitForConnectResult;
                                     }
                                     if(CurrentState == ClientStates.WaitForPublishStreamBeginResult)
                                     {
-                                        Console.WriteLine("Switch6");
+                                        //Console.WriteLine("Switch6");
                                         CurrentState = ClientStates.Streaming;
                                         SendChunkSize(100);
                                     }
@@ -336,7 +336,7 @@ namespace RTMP
                                 {
                                     if(CurrentState == ClientStates.WaitingForAcknowledge)
                                     {
-                                        Console.WriteLine("SWITCH1");
+                                        //Console.WriteLine("SWITCH1");
                                         SendWindowAcknowledgementSize();
                                         CurrentState = ClientStates.WaitForPeerBandwidth;
                                     }
@@ -347,7 +347,7 @@ namespace RTMP
                                 {
                                     if(CurrentState == ClientStates.WaitForPeerBandwidth)
                                     {
-                                        Console.WriteLine("SWITCh2");
+                                        //Console.WriteLine("SWITCh2");
                                         CurrentState = ClientStates.WaitForStreamBeginControl;
                                     }
                                     ParseClientBandwidth(reader.ReadInt32(), reader.ReadByte());
@@ -370,7 +370,7 @@ namespace RTMP
                                     {
                                         if (amfReader.amfData.Strings.Contains("_result"))
                                         {
-                                            Console.WriteLine("SWITCH4");
+                                            //Console.WriteLine("SWITCH4");
                                             createStream();
                                             CurrentState = ClientStates.WaitForCreateStreamResponse;
                                         }
@@ -379,7 +379,7 @@ namespace RTMP
                                     {
                                         if (amfReader.amfData.Strings.Contains("_result"))
                                         {
-                                            Console.WriteLine("SWITCH5");
+                                            //Console.WriteLine("SWITCH5");
                                             publish(PublisherId);
                                             CurrentState = ClientStates.WaitForPublishStreamBeginResult;
                                         }

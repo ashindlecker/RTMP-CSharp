@@ -42,6 +42,11 @@ namespace RTMP
 
         public FlvTag()
         {
+            Reset();
+        }
+
+        public void Reset()
+        {
             TagType = TagTypes.Video;
             Length = null;
             TimeStamp = null;
@@ -51,7 +56,6 @@ namespace RTMP
 
         public void Load(EndianBinaryReader reader)
         {
-            
             TagType = (TagTypes)reader.ReadByte();
             Length = reader.ReadBytes(3);
             TimeStamp = reader.ReadBytes(4);
@@ -59,6 +63,7 @@ namespace RTMP
             Data = reader.ReadBytes((int)LengthValue);
 
             //BECAUSE SOMEONE AT ADOBE THOUGHT IT'D BE A GRAND IDEA TO DO MIXED ENDIAN
+            //( ͡° ͜ʖ﻿ ͡°) comic saaaanssss, comic saaaaaaaaaaaaaaaanssssssss
             TimeStampNormal = new byte[TimeStamp.Length];
             TimeStampNormal[0] = TimeStamp[3];
             TimeStampNormal[1] = TimeStamp[0];

@@ -278,7 +278,7 @@ namespace RTMP
             {
                 var buffer = new byte[tcpClient.Available];
                 tcpClient.GetStream().Read(buffer, 0, buffer.Length);
-
+                
                 if(CurrentState == ClientStates.Handshaking)
                 {
                     if(sMemory.Length < HANDSHAKE_RAND_LENGTH * 2)

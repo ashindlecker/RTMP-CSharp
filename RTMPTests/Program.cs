@@ -8,7 +8,10 @@ using RTMP;
 using System.IO;
 using MiscUtil.IO;
 using System.Diagnostics;
+using RTMP.YouTube;
 using TwitchSharp;
+using System.Web;
+using System.Net;
 
 namespace RTMPTests
 {
@@ -16,27 +19,28 @@ namespace RTMPTests
     {
         static void Main(string[] args)
         {
-            var file = File.OpenRead("Test.flv");
-            var Flv = new RTMP.Flv();
-            Flv.Load(file);
+            FlvStreamer streamer = new FlvStreamer();
 
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Restart();
             var client = new Client();
 
-            client.PublisherId = "live_WhateverYourKeyIs";
+            client.PublisherId = "live_YourStreamID";
             client.Connect("199.9.255.53");
             client.Start();
-            var count = 0;
 
-            const int tagSend = 70;
 
-            var streamer = new FlvStreamer(Flv);
-            streamer.Start();
+            var vclient = new VideoClient();
+            vclient.GrabVideo("http://www.youtube.com/watch?v=at68PMbgyhw");
+            vclient.AddedTag += delegate(FlvTag tag)
+                                    {
+                                        client.SendFlv(new FlvTag[1] {tag});
+                                    };
+
+
             while(true)
             {
                 client.Update();
-                streamer.Update(client);
+                if(client.CurrentState == Client.ClientStates.Streaming)
+                    vclient.Update();
             }
         }
     }
